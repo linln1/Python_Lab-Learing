@@ -34,3 +34,10 @@ loop = asyncio.get_loop_event()
 tasks = [getwebpage(host) for host in ['www.sina.com.cn', 'www.sohu.com', 'www.163.com']]
 loop.run_until_complete(asyncio.wait(tasks))
 loop.close()
+
+以下为等价写法
+# async def hello():
+#                   print('hello,world! (%s)' % threading.currentThread())
+#                   r = await asyncio.sleep(1)
+#                   print('hello,again! (%s)' % threading.currentThread())
+                  
