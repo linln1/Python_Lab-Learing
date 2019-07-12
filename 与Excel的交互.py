@@ -332,5 +332,79 @@ for input_file in glob.glob(os.path.join(input_directory, '*,xls*')):
 print('Number of Excel workboos: %d' % (workbook_counter))
 
 #从多个工作簿中连接数据
+input_folder = sys.argv[1]
+output_file = sys.argv[2]
 
+output_workbook = Workbook()
+output_worksheet = output_workbook.add_sheet('All_data_All_workbooks')
+data = []
+first_worksheet = True
+
+for input_file in glob.glob(os.path.join(input_folder,'*.xls*')):
+    print(os.path.basename(input_file))
+    with open_workbook(input_file) as workbook:
+        for worksheet in workbook.sheets():
+            if first_worksheet:
+                header_row = worksheet.row_values(0)
+                data.append(header_row)
+                first_worksheet = False
+            for row_index in range(1, worksheet.nrows):
+                row_list = []
+                for col_index in range(1, worksheet.ncols):
+                    cell_value = worksheet.cell_value(row_index, col_index)
+                    cell_type = worksheet.cell_type(row_index, col_index)
+                    if cell_type == 3:
+                        data_cell = xldate_as_tuple(cell_value, workbook.datemode)
+                        data_cell = date(*date_cell[0:3]).strftime('%m/%d/%Y')
+                        row_list.append(date_cell)
+                    else:
+                        row_list.append(cell_value)
+                data.append(row_list)
+for list_index, output_list in enumerate(data):
+    for element_index, element in enumerate(output_list):
+        output_worksheet.write(list_index, element_index,element)
+output_worksheet.save(output_file)
+
+#pandas
+all_workbooks = glob.glob(os.path.join(input_folder, '*.xls*'))
+data_frames = []
+for workbook in all_workbooks:
+    all_worksheets = pd.read_excel(workbook, sheetname=None, index_col = None)
+    for worksheet_name, data in all_worksheets.items():
+        data_frames.append(data)
+all_data_concatenated = pd.concat(data_frames, axis=0, ignore_index=True)
+writer = pd.ExcelWriter(output_file)
+all_data_concatenated.to_excel(writer, sheet_name='All_data_All_workbooks',index= False)
+writer.save()
+
+#为每个工作簿和工作表计算总数和均值
+#pandas
+
+input_path = sys.argv[1]
+output_file = sys.argv[2]
+all_workbooks = glob.glob(os.path.join(input_path,'*.xls*'))
+data_frames = []
+for workbook in all_workbooks:
+    all_worksheets = pd.read_excel(workbook, sheet_name=None, index_col= None)
+    workbook_total_sales = []
+    workbook_number_of_sales = []
+    worksheet_data_frames = []
+    worksheets_data_frame = None
+    workbook_data_frame = None
+    for worksheet_name, data in all_worksheets.items():
+        toatal_sales = pd.DataFrame([float(str(value).strip('$').replace(',','')) for value in data.loc[:, 'Sale Amount']]).sum()
+        numbers_of_sales = len(data.loc[:, 'Sale Amount'])
+        average_sales = pd.DataFrame(total_sales/numbers_of_sales)
+        
+        workbook_total_sales.append(total_sales)
+        workbook_number_of_sales.append(numbers_of_sales)
+        data = {'workbook': os.path.basename(workbook),
+                'worksheet': worksheet_name,
+                'worksheet_total': total_sales,
+                'worksheet_average': average_sales}
+        worksheet_data_frames.append(pd.DataFrame(data, columns=['workbook', 'worksheet', 'worksheet_total', 'worksheet_average']))
+        worksheet_data_frame = pd.concat(worksheet_data_frames, axis =0 ,ignore_index= False)
+        workbook_total = pd.DataFrame(workbook_total_sales).sum()
+        
+            
 
