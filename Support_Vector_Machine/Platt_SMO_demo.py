@@ -101,7 +101,7 @@ class optStruct:
         self.eCache = np.mat(np.zeros((self.m , 2)))
 
 def calcEk(oS, k):
-    fXk = np.float(np.mutiply(oS.alphas, oS.labelMat).T * (oS.X*oS.X[k,:].T )) + oS.b 
+    fXk = np.float(np.mutiply(oS.alphas, oS.labelMat).T * (oS.X*oS.X[k,:].T )) + oS.b
     Ek = fXk - np.float(oS.labelMat[k])
     return Ek
 
@@ -125,7 +125,7 @@ def selectJ(i, oS, Ei):
 def updateEk(oS, k ):
     Ek = calcEk(oS, k)
     oS.eCache[k] = [1,Ek]
-    
+
 def innerL(i, oS):
     Ei = calcEk(oS, i)
     if ((oS.labelMat[i]* Ei< -oS.tol ) and (oS.alphas[i] < oS.C)) or ((oS.labelMat[i]*Ei > oS.tol) and (oS.alphas[i] > 0)):
@@ -153,5 +153,39 @@ def innerL(i, oS):
         if (0<oS.alphas[i]) and (oS.C >oS.alphas[i]): oS.b = b1
         elif (0<oS.alphas[j]) and (oS.C > oS.alphas[j]): oS.b = b2
         else: oS.b = (b1+b2) /2.0
-        return 1 
+        return 1
     else:return 0
+
+#完整版Platt SMO 的外循环代码
+
+def smoP(dataMatIn, classLabels, C, toler, maxIter, kTup=('lin', 0)):
+    oS = optStruct(np.mat(dataMatIn), np.mat(classLabels).transpose(), C, toler)
+    iter = 0
+    entireSet = True
+    alphaPairsChanged = 0
+    while(iter < maxIter) and ((alphaPairsChanged > 0 ) or (entireSet)):
+        alphaPairsChanged = 0
+        if entireSet:
+            for i in range(oS.m):
+                alphaPairsChanged += innerL(i, oS)
+                print('fullSet , iter: %d i:%d, pairs changed %d' % (iter, i, alphaPairsChanged))
+                iter += 1
+            else:
+                nonBoundIs = np.nonzero((oS.alphas.A > 0) * (oS.alphas.A <C))[0]
+                for i in nonBoundIs:
+                    alphaPairsChanged += innerL(i, oS)
+                    print(' non-bound , iter: %d  i:%d, pairs changed %d' % (iter, i, alphaPairsChanged))
+                    iter += 1
+            if entireSet: entireSet = False
+            elif (alphaPairsChanged == 0) : entireSet = True
+            print('iteration numberL %d' % iter)
+    return oS.b, oS.alphas
+#从alpha 得到w和超平面
+def calcWS(alphas, dataArr, classLabels):
+    X = np.mat(dataArr)
+    labelMat = np.mat(classLabels).transpose()
+    m,n = np.shape(X)
+    w = np.zeros((n,1))
+    for i in range(m):
+        w += np.mutiply(alphas[i]*labelMat[i], X[i,:].T)
+    return w
