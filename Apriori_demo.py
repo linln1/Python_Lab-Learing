@@ -1,4 +1,5 @@
 import numpy as np
+#频繁项集
 
 def loadDataSet():
     return [[1,3,4], [2,3,5], [1,2,3,5], [2,5]]
@@ -55,4 +56,36 @@ def apriori(dataSet, minSupport = 0.5):
         L.append(Lk)
         k += 1
     return L, supportData
+
+#挖掘关联规则 /关联分析
+
+def calcConf(freqSet, H, supportData, brl, minConf = 0.7):
+    prunedH = []
+    for conseq in H:
+        conf = supportData[freqSet] / supportData[freqSet-conseq]
+        if conf >= minConf:
+            print(freqSet-conseq,'-->',conseq,'conf', conf)
+            brl.appenf((freqSet-conseq, conseq, conf))
+            prunedH.append(conseq)
+    return prunedH
+
+def rulesFromConseq(freqSet, H, supportData, brl, minConf = 0.7):
+    m = len(H[0])
+    if (len(freqSet) > (m+1)):
+        Hmp1 = aprioriGen(H, m+1)
+        Hmp1 = calcConf(freqSet, Hmp1, supportData, brl, minConf)
+        if (len(Hmp1) > 1):
+            rulesFromConseq(freqSet, Hmp1, supportData, brl, minConf)
+            
+
+def generateRules(L, supportData, minConf=0.7):
+    bigRuleList = []
+    for i in range(1, len(L)):
+        for freqSet in L[i]:
+            H1 = [frozenset([item]) for item in freqSet]
+            if (i>1):
+                rulesFromConseq(freqSet, H1, supportData, bigRuleList, minConf)
+            else:
+                calcConf(freqSet, H1, supportData, bigRuleList, minConf)
+    return bigRuleList
 
